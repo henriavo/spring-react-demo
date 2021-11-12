@@ -14,7 +14,7 @@
 	<name>spring-react-demo</name>
 	<description>Demo project for Spring and React</description>
 	<properties>
-		<java.version>11</java.version>
+		<java.version>8</java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -47,6 +47,13 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- While you can install all of JavaScripts command line tools,
+				you need not do so - at least, not yet.	-->
+			<plugin>
+				<groupId>com.github.eirslett</groupId>
+				<artifactId>frontend-maven-plugin</artifactId>
+				<version>1.12.0</version>
 			</plugin>
 		</plugins>
 	</build>
