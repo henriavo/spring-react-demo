@@ -35,3 +35,12 @@ build/
 .mvn/*
 mvnw
 mvnw.cmd
+
+
+.npm-debug.log.swp
+node/
+node_modules/
+npm-debug.log
+package-lock.json
+
+
