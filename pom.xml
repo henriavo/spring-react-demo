@@ -64,6 +64,13 @@
 						</goals>
 						<!-- optional: default phase is "generate-resources" -->
 						<phase>generate-resources</phase>
+<!--  the below section is known as "Available parameters" in docs -->
+						<configuration>
+							<!-- See https://nodejs.org/en/download/ for latest node and npm (lts) versions -->
+							<nodeVersion>v14.15.4</nodeVersion>
+							<npmVersion>6.14.11</npmVersion>
+						</configuration>
+
 					</execution>
 					<execution>
 						<id>NPM INSTALL</id>
@@ -81,18 +88,13 @@
 						</configuration>
 					</execution>
 					<execution>
-						<id>NPM START</id>
+						<id>WEBPACK</id>
 						<goals>
-							<goal>npm</goal>
+							<goal>webpack</goal>
 						</goals>
 						<!-- optional: default phase is "generate-resources" -->
 						<phase>generate-resources</phase>
 						<configuration>
-							<!-- optional: The default argument is actually
-                            "install", so unless you need to run some other npm command,
-                            you can remove this whole <configuration> section.
-                            -->
-							<arguments>start</arguments>
 						</configuration>
 					</execution>
 
