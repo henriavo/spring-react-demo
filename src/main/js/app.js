@@ -36,14 +36,16 @@ class EmployeeList extends React.Component{
 		);
 		return (
 			<table>
-				<tbody>
+				<thead>
 					<tr>
 						<th>First Name</th>
 						<th>Last Name</th>
 						<th>Description</th>
 					</tr>
-					{employees}
-				</tbody>
+				</thead>
+                <tbody>
+                    {employees}
+                </tbody>
 			</table>
 		)
 	}
