@@ -21,11 +21,11 @@ public class DatabaseLoader implements CommandLineRunner {
                         "Luna",
                         "Mexican actor, singer, director, and producer."));
 
-        this.repository.save(new Employee("Frodo", "Baggins", "ring bearer"));
-        this.repository.save(new Employee("Bilbo", "Baggins", "burglar"));
-        this.repository.save(new Employee("Gandalf", "the Grey", "wizard"));
-        this.repository.save(new Employee("Samwise", "Gamgee", "gardener"));
-        this.repository.save(new Employee("Meriadoc", "Brandybuck", "pony rider"));
-        this.repository.save(new Employee("Peregrin", "Took", "pipe smoker"));
+        this.repository.save(new Employee("Bartholomew", "Simpson", "el barto"));
+        this.repository.save(new Employee("Lenford", "Leonard", "jerk"));
+        this.repository.save(new Employee("Otto", "Mann", "school bus driver"));
+        this.repository.save(new Employee("Martin", "Prince Jr.", "Martin Priss"));
+        this.repository.save(new Employee("Cecil", "Terwilliger", "criminal mastermind"));
+        this.repository.save(new Employee("Doris", "Freedman", "cafeteria chef and nurse"));
     }
 }
