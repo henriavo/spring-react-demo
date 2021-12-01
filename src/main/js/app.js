@@ -11,7 +11,7 @@ const root = "/api";
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { employees: [] };
+    this.state = { employees: [], attributes: [] };
   }
 
   componentDidMount() {
@@ -40,13 +40,104 @@ class App extends React.Component {
       });
   }
 
+  onCreate(newEmployee) {
+    follow(client, root, ["employees"])
+      .then((employeeCollection) => {
+        return client({
+          method: "POST",
+          path: employeeCollection.entity._links.self.href,
+          entity: newEmployee,
+          headers: { "Content-Type": "application/json" },
+        });
+      })
+      .then((response) => {
+        return follow(client, root, [
+          { rel: "employees", params: { size: this.state.pageSize } },
+        ]);
+      })
+      .done((response) => {
+        if (typeof response.entity._links.last !== "undefined") {
+          this.onNavigate(response.entity._links.last.href);
+        } else {
+          this.onNavigate(response.entity._links.self.href);
+        }
+      });
+  }
+
   render() {
-    return <EmployeeList employees={this.state.employees} />;
+    return (
+      <div>
+        <CreateDialog
+          attributes={this.state.attributes}
+          onCreate={this.onCreate}
+        />
+        <EmployeeList employees={this.state.employees} />
+      </div>
+    );
   }
 }
-// end::app[]
 
-// tag::employee-list[]
+class CreateDialog extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleSubmit(e) {
+    e.preventDefault();
+    const newEmployee = {};
+    this.props.attributes.forEach((attribute) => {
+      newEmployee[attribute] = ReactDOM.findDOMNode(
+        this.refs[attribute]
+      ).value.trim();
+    });
+    this.props.onCreate(newEmployee);
+
+    // clear out the dialog's inputs
+    this.props.attributes.forEach((attribute) => {
+      ReactDOM.findDOMNode(this.refs[attribute]).value = "";
+    });
+
+    // Navigate away from the dialog to hide it.
+    window.location = "#";
+  }
+
+  render() {
+    // console.log(this.props.attributes.size);
+    const inputs = this.props.attributes.map((attribute) => (
+      <p key={attribute}>
+        <input
+          type="text"
+          placeholder={attribute}
+          ref={attribute}
+          className="field"
+        />
+      </p>
+    ));
+
+    return (
+      <div>
+        <a href="#createEmployee">Create</a>
+
+        <div id="createEmployee" className="modalDialog">
+          <div>
+            <a href="#" title="Close" className="close">
+              X
+            </a>
+
+            <h2>Create new employee</h2>
+
+            <form>
+              {inputs}
+              <button onClick={this.handleSubmit}>Create</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
 class EmployeeList extends React.Component {
   render() {
     const employees = this.props.employees.map((employee) => (
@@ -66,9 +157,7 @@ class EmployeeList extends React.Component {
     );
   }
 }
-// end::employee-list[]
 
-// tag::employee[]
 class Employee extends React.Component {
   render() {
     return (
@@ -80,8 +169,5 @@ class Employee extends React.Component {
     );
   }
 }
-// end::employee[]
 
-// tag::render[]
 ReactDOM.render(<App />, document.getElementById("react"));
-// end::render[]
