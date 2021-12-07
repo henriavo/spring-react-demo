@@ -1,8 +1,11 @@
 package org.henri.project.springreactdemo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Version;
 import java.util.Objects;
 
 @Entity // JPA annotation denotes a whole class for storage in relational db.
@@ -12,6 +15,10 @@ public class Employee {
     private String firstName;
     private String lastName;
     private String description;
+
+    private @Version
+    @JsonIgnore
+    Long version;
 
     private Employee() {}
 
