@@ -13,15 +13,25 @@ const follow = require("./follow"); // function to hop multiple links by "rel"
 
 const root = "/api";
 
+var stompClient = require("./websocket-listener");
+
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { employees: [], attributes: [], pageSize: 2, links: {} };
+    this.state = {
+      employees: [],
+      attributes: [],
+      page: 1,
+      pageSize: 2,
+      links: {},
+    };
     this.updatePageSize = this.updatePageSize.bind(this);
     this.onCreate = this.onCreate.bind(this);
     this.onUpdate = this.onUpdate.bind(this);
     this.onDelete = this.onDelete.bind(this);
     this.onNavigate = this.onNavigate.bind(this);
+    this.refreshCurrentPage = this.refreshCurrentPage.bind(this);
+		this.refreshAndGoToLastPage = this.refreshAndGoToLastPage.bind(this);
   }
 
   componentDidMount() {
@@ -67,29 +77,16 @@ class App extends React.Component {
       });
   }
 
-  // post new record, get new records, fix nav links.
+  // allow events to update
   onCreate(newEmployee) {
-    follow(client, root, ["employees"])
-      .then((employeeCollection) => {
-        return client({
-          method: "POST",
-          path: employeeCollection.entity._links.self.href,
-          entity: newEmployee,
-          headers: { "Content-Type": "application/json" },
-        });
-      })
-      .then((response) => {
-        return follow(client, root, [
-          { rel: "employees", params: { size: this.state.pageSize } },
-        ]);
-      })
-      .done((response) => {
-        if (typeof response.entity._links.last !== "undefined") {
-          this.onNavigate(response.entity._links.last.href);
-        } else {
-          this.onNavigate(response.entity._links.self.href);
-        }
+    follow(client, root, ["employees"]).done((response) => {
+      client({
+        method: "POST",
+        path: response.entity._links.self.href,
+        entity: newEmployee,
+        headers: { "Content-Type": "application/json" },
       });
+    });
   }
 
   //  http delete, get from db, set state.
@@ -160,6 +157,68 @@ class App extends React.Component {
     );
   }
 
+  // registering for websocket events
+  componentDidMount() {
+    this.loadFromServer(this.state.pageSize);
+    stompClient.register([
+      { route: "/topic/newEmployee", callback: this.refreshAndGoToLastPage },
+      { route: "/topic/updateEmployee", callback: this.refreshCurrentPage },
+      { route: "/topic/deleteEmployee", callback: this.refreshCurrentPage },
+    ]);
+  }
+
+  // 1)new
+  refreshAndGoToLastPage(message) {
+    follow(client, root, [
+      {
+        rel: "employees",
+        params: { size: this.state.pageSize },
+      },
+    ]).done((response) => {
+      if (response.entity._links.last !== undefined) {
+        this.onNavigate(response.entity._links.last.href);
+      } else {
+        this.onNavigate(response.entity._links.self.href);
+      }
+    });
+  }
+
+  // 1)delete 2)update
+  refreshCurrentPage(message) {
+    follow(client, root, [
+      {
+        rel: "employees",
+        params: {
+          size: this.state.pageSize,
+          page: this.state.page.number,
+        },
+      },
+    ])
+      .then((employeeCollection) => {
+        this.links = employeeCollection.entity._links;
+        this.page = employeeCollection.entity.page;
+
+        return employeeCollection.entity._embedded.employees.map((employee) => {
+          return client({
+            method: "GET",
+            path: employee._links.self.href,
+          });
+        });
+      })
+      .then((employeePromises) => {
+        return when.all(employeePromises);
+      })
+      .then((employees) => {
+        this.setState({
+          page: this.page,
+          employees: employees,
+          attributes: Object.keys(this.schema.properties),
+          pageSize: this.state.pageSize,
+          links: this.links,
+        });
+      });
+  }
+
   render() {
     return (
       <div>
@@ -168,6 +227,7 @@ class App extends React.Component {
           onCreate={this.onCreate}
         />
         <EmployeeList
+          page={this.state.page}
           employees={this.state.employees}
           links={this.state.links}
           pageSize={this.state.pageSize}
@@ -181,6 +241,5 @@ class App extends React.Component {
     );
   }
 }
-
 
 ReactDOM.render(<App />, document.getElementById("react"));

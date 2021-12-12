@@ -25,5 +25,11 @@ module.exports = {
                 }]
             }
         ]
+    },
+    // https://github.com/jmesnil/stomp-websocket/issues/119
+    node: {
+      net: 'empty',
+      tls: 'empty',
+      dns: 'empty'
     }
 };
