@@ -7,6 +7,13 @@
 </head>
 <body>
 
+<div>
+    Hello, <span id="managername" th:text="${#authentication.name}">user</span>.
+    <form th:action="@{/logout}" method="post">
+        <input type="submit" value="Log Out"/>
+    </form>
+</div>
+
 <!--
  This is where you will direct React to plug in the rendered output.
  👇👇👇

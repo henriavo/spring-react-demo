@@ -24,6 +24,7 @@ class App extends React.Component {
       page: 1,
       pageSize: 2,
       links: {},
+      loggedInManager: this.props.loggedInManager,
     };
     this.updatePageSize = this.updatePageSize.bind(this);
     this.onCreate = this.onCreate.bind(this);
@@ -31,7 +32,7 @@ class App extends React.Component {
     this.onDelete = this.onDelete.bind(this);
     this.onNavigate = this.onNavigate.bind(this);
     this.refreshCurrentPage = this.refreshCurrentPage.bind(this);
-		this.refreshAndGoToLastPage = this.refreshAndGoToLastPage.bind(this);
+    this.refreshAndGoToLastPage = this.refreshAndGoToLastPage.bind(this);
   }
 
   componentDidMount() {
@@ -47,28 +48,45 @@ class App extends React.Component {
           path: employeeCollection.entity._links.profile.href,
           headers: { Accept: "application/schema+json" },
         }).then((schema) => {
-          this.schema = schema.entity; // store metadata
-          this.links = employeeCollection.entity._links; // store nav links
+          // tag::json-schema-filter[]
+          /**
+           * Filter unneeded JSON Schema properties, like uri references and
+           * subtypes ($ref).
+           */
+          Object.keys(schema.entity.properties).forEach(function (property) {
+            if (
+              schema.entity.properties[property].hasOwnProperty("format") &&
+              schema.entity.properties[property].format === "uri"
+            ) {
+              delete schema.entity.properties[property];
+            } else if (
+              schema.entity.properties[property].hasOwnProperty("$ref")
+            ) {
+              delete schema.entity.properties[property];
+            }
+          });
+
+          this.schema = schema.entity;
+          this.links = employeeCollection.entity._links;
           return employeeCollection;
+          // end::json-schema-filter[]
         });
       })
       .then((employeeCollection) => {
-        //  This is what you need to fetch an ETag header for each employee.
+        this.page = employeeCollection.entity.page;
         return employeeCollection.entity._embedded.employees.map((employee) =>
           client({
-            // from collection of employees to array of get promises
             method: "GET",
             path: employee._links.self.href,
           })
         );
       })
       .then((employeePromises) => {
-        // resolved when all Get promises resolve
         return when.all(employeePromises);
       })
       .done((employees) => {
-        // set state
         this.setState({
+          page: this.page,
           employees: employees,
           attributes: Object.keys(this.schema.properties),
           pageSize: pageSize,
@@ -93,7 +111,15 @@ class App extends React.Component {
   onDelete(employee) {
     client({ method: "DELETE", path: employee.entity._links.self.href }).done(
       (response) => {
-        this.loadFromServer(this.state.pageSize);
+        /* let the websocket handle updating the UI */
+      },
+      (response) => {
+        if (response.status.code === 403) {
+          alert(
+            "ACCESS DENIED: You are not authorized to delete " +
+              employee.entity._links.self.href
+          );
+        }
       }
     );
   }
@@ -133,28 +159,39 @@ class App extends React.Component {
   }
 
   onUpdate(employee, updatedEmployee) {
-    client({
-      method: "PUT",
-      path: employee.entity._links.self.href,
-      entity: updatedEmployee,
-      headers: {
-        "Content-Type": "application/json",
-        "If-Match": employee.headers.Etag,
-      },
-    }).done(
-      (response) => {
-        this.loadFromServer(this.state.pageSize);
-      },
-      (response) => {
-        if (response.status.code === 412) {
-          alert(
-            "DENIED: Unable to update " +
-              employee.entity._links.self.href +
-              ". Your copy is stale."
-          );
+    if (employee.entity.manager.name === this.state.loggedInManager) {
+      updatedEmployee["manager"] = employee.entity.manager;
+      client({
+        method: "PUT",
+        path: employee.entity._links.self.href,
+        entity: updatedEmployee,
+        headers: {
+          "Content-Type": "application/json",
+          "If-Match": employee.headers.Etag,
+        },
+      }).done(
+        (response) => {
+          /* Let the websocket handler update the state */
+        },
+        (response) => {
+          if (response.status.code === 403) {
+            alert(
+              "ACCESS DENIED: You are not authorized to update " +
+                employee.entity._links.self.href
+            );
+          }
+          if (response.status.code === 412) {
+            alert(
+              "DENIED: Unable to update " +
+                employee.entity._links.self.href +
+                ". Your copy is stale."
+            );
+          }
         }
-      }
-    );
+      );
+    } else {
+      alert("You are not authorized to update");
+    }
   }
 
   // registering for websocket events
@@ -236,10 +273,14 @@ class App extends React.Component {
           onUpdate={this.onUpdate}
           onDelete={this.onDelete}
           updatePageSize={this.updatePageSize}
+          loggedInManager={this.state.loggedInManager}
         />
       </div>
     );
   }
 }
 
-ReactDOM.render(<App />, document.getElementById("react"));
+ReactDOM.render(
+  <App loggedInManager={document.getElementById("managername").innerHTML} />,
+  document.getElementById("react")
+);
