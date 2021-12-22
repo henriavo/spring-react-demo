@@ -13,6 +13,9 @@ export default class Employee extends React.Component {
   }
 
   render() {
+    console.log("*******");
+    console.log(this.props.employee.entity.manager.name);
+    console.log("*******");
     return (
       <tr>
         <td>{this.props.employee.entity.firstName}</td>
